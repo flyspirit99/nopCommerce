@@ -23,21 +23,25 @@ namespace Nop.Plugin.Api.Maps
                                        int.MaxValue);
             }
 
+            //var typeMaps =
+            //    StaticCacheManager.Get<Dictionary<string, Dictionary<string, Tuple<string, Type>>>>(Constants.Configurations.JsonTypeMapsPattern, () => null, 0);
+
             var typeMaps =
-                StaticCacheManager.Get<Dictionary<string, Dictionary<string, Tuple<string, Type>>>>(Constants.Configurations.JsonTypeMapsPattern, () => null, 0);
+                StaticCacheManager.Get<Dictionary<string, Dictionary<string, Tuple<string, Type>>>>(Constants.Configurations.JsonTypeMapsPattern, () => new Dictionary<string, Dictionary<string, Tuple<string, Type>>>(), 0);
+
 
             if (!typeMaps.ContainsKey(type.Name))
             {
-                Build(type);
+                Build(typeMaps, type);
             }
 
             return typeMaps[type.Name];
         }
 
-        private void Build(Type type)
+        private void Build(Dictionary<string, Dictionary<string, Tuple<string, Type>>> typeMaps, Type type)
         {
-            var typeMaps =
-                StaticCacheManager.Get<Dictionary<string, Dictionary<string, Tuple<string, Type>>>>(Constants.Configurations.JsonTypeMapsPattern, () => null, 0);
+            //var typeMaps =
+            //    StaticCacheManager.Get<Dictionary<string, Dictionary<string, Tuple<string, Type>>>>(Constants.Configurations.JsonTypeMapsPattern, () => new Dictionary<string, Dictionary<string, Tuple<string, Type>>>(), 0);
 
             var mapForCurrentType = new Dictionary<string, Tuple<string, Type>>();
 

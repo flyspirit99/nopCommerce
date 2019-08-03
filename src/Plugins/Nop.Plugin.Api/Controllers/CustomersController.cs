@@ -354,6 +354,13 @@ namespace Nop.Plugin.Api.Controllers
                     else
                     {
                         currentCustomer.Addresses.Add(addressEntity);
+                        //some validation
+                        if (addressEntity.CountryId == 0)
+                            addressEntity.CountryId = null;
+                        if (addressEntity.StateProvinceId == 0)
+                            addressEntity.StateProvinceId = null;
+
+                        currentCustomer.CustomerAddressMappings.Add(new CustomerAddressMapping { Address = addressEntity });
                     }
                 }
             }

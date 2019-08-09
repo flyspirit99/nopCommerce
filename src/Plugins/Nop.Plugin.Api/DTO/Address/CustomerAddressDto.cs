@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Text;
 using Newtonsoft.Json;
 
-namespace Nop.Plugin.Api.SimpleDTO
+namespace Nop.Plugin.Api.DTO
 {
     public class CustomerAddressDto
     {

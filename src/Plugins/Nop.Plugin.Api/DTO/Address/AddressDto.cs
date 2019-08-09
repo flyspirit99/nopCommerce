@@ -103,5 +103,8 @@ namespace Nop.Plugin.Api.DTO
         /// </summary>
         [JsonProperty("province")]
         public string StateProvinceName { get; set; }
+
+        [JsonProperty("isDefault")]
+        public bool IsDefault { get; set; }
     }
 }

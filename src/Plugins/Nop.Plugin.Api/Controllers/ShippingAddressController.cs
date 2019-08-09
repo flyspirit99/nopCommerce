@@ -9,7 +9,6 @@ using Nop.Plugin.Api.DTO.Errors;
 using Nop.Plugin.Api.JSON.ActionResults;
 using Nop.Plugin.Api.JSON.Serializers;
 using Nop.Plugin.Api.Services;
-using Nop.Plugin.Api.SimpleDTO;
 using Nop.Services.Customers;
 using Nop.Services.Discounts;
 using Nop.Services.Localization;
@@ -19,6 +18,14 @@ using Nop.Services.Security;
 using Nop.Services.Stores;
 using Nop.Plugin.Api.ModelBinders;
 using Nop.Services.Common;
+using Nop.Plugin.Api.DTO;
+using Nop.Plugin.Api.DTO.Base;
+using Nop.Plugin.Api.Delta;
+using Nop.Plugin.Api.DTO.Customers;
+using Nop.Plugin.Api.MappingExtensions;
+using Nop.Core.Domain.Customers;
+using Nop.Plugin.Api.Helpers;
+using Nop.Services.Directory;
 
 namespace Nop.Plugin.Api.Controllers
 {
@@ -26,6 +33,8 @@ namespace Nop.Plugin.Api.Controllers
     {
         private readonly ICustomerApiService _customerApiService;
         private readonly IAddressService _addressService;
+        private readonly IMappingHelper _mappingHelper;
+        private readonly ICountryService _countryService;
 
         public ShippingAddressController(
                 ICustomerApiService customerApiService,
@@ -38,18 +47,22 @@ namespace Nop.Plugin.Api.Controllers
                 ICustomerActivityService customerActivityService,
                 ILocalizationService localizationService,
                 IPictureService pictureService,
-                IAddressService addressService
+                IAddressService addressService,
+                IMappingHelper mappingHelper,
+                ICountryService countryService
             ) :
             base(jsonFieldsSerializer, aclService, customerService, storeMappingService, storeService, discountService, customerActivityService,
                  localizationService, pictureService)
         {
             _customerApiService = customerApiService;
             _addressService = addressService;
+            _mappingHelper = mappingHelper;
+            _countryService = countryService;
         }
 
         [HttpGet]
         [Route("/api/address/{customerId}")]
-        [ProducesResponseType(typeof(SimpleAddressDto), (int)HttpStatusCode.OK)]
+        [ProducesResponseType(typeof(AddressResponseDto), (int)HttpStatusCode.OK)]
         [ProducesResponseType(typeof(ErrorsRootObject), (int)HttpStatusCode.BadRequest)]
         [ProducesResponseType(typeof(string), (int)HttpStatusCode.NotFound)]
         [ProducesResponseType(typeof(string), (int)HttpStatusCode.Unauthorized)]
@@ -68,9 +81,9 @@ namespace Nop.Plugin.Api.Controllers
                 return Error(HttpStatusCode.NotFound, "customer", "not found");
             }
 
-            var addressDto = new SimpleAddressDto
+            var addressDto = new AddressResponseDto
             {
-                Data = customer.Addresses.Select(x => x.City + x.Address1 + x.Address2).ToList()
+                Data = customer.Addresses.ToList()
             };
 
             var json = JsonFieldsSerializer.Serialize(addressDto, fields);
@@ -80,7 +93,7 @@ namespace Nop.Plugin.Api.Controllers
 
         [HttpPut]
         [Route("/api/address/setDefault")]
-        [ProducesResponseType(typeof(SimpleBaseDto<string>), (int)HttpStatusCode.OK)]
+        [ProducesResponseType(typeof(ResponseBaseDto<string>), (int)HttpStatusCode.OK)]
         [ProducesResponseType(typeof(ErrorsRootObject), (int)HttpStatusCode.BadRequest)]
         [ProducesResponseType(typeof(string), (int)HttpStatusCode.NotFound)]
         [ProducesResponseType(typeof(string), (int)HttpStatusCode.Unauthorized)]
@@ -118,7 +131,7 @@ namespace Nop.Plugin.Api.Controllers
 
                 CustomerService.UpdateCustomer(customer);
             }
-            var resultDto = new SimpleBaseDto<string>
+            var resultDto = new ResponseBaseDto<string>
             {
                 Data = "Success"
             };
@@ -130,7 +143,7 @@ namespace Nop.Plugin.Api.Controllers
 
         [HttpDelete]
         [Route("/api/address")]
-        [ProducesResponseType(typeof(SimpleBaseDto<string>), (int)HttpStatusCode.OK)]
+        [ProducesResponseType(typeof(ResponseBaseDto<string>), (int)HttpStatusCode.OK)]
         [ProducesResponseType(typeof(ErrorsRootObject), (int)HttpStatusCode.BadRequest)]
         [ProducesResponseType(typeof(string), (int)HttpStatusCode.NotFound)]
         [ProducesResponseType(typeof(string), (int)HttpStatusCode.Unauthorized)]
@@ -167,7 +180,7 @@ namespace Nop.Plugin.Api.Controllers
             _addressService.DeleteAddress(address);
 
 
-            var resultDto = new SimpleBaseDto<string>
+            var resultDto = new ResponseBaseDto<string>
             {
                 Data = "Success"
             };
@@ -175,6 +188,129 @@ namespace Nop.Plugin.Api.Controllers
             var json = JsonFieldsSerializer.Serialize(resultDto, "");
 
             return new RawJsonActionResult(json);
+        }
+
+
+        [HttpPut]
+        [Route("/api/address/{id}")]
+        [ProducesResponseType(typeof(ResponseBaseDto<int?>), (int)HttpStatusCode.OK)]
+        [ProducesResponseType(typeof(ErrorsRootObject), 422)]
+        [ProducesResponseType(typeof(ErrorsRootObject), (int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType(typeof(string), (int)HttpStatusCode.NotFound)]
+        [ProducesResponseType(typeof(string), (int)HttpStatusCode.Unauthorized)]
+        public IActionResult UpdateAddress(
+            [ModelBinder(typeof(JsonModelBinder<CustomerDto>))]
+            Delta<CustomerDto> customerDelta)
+        {
+            // Here we display the errors if the validation has failed at some point.
+            if (!ModelState.IsValid)
+            {
+                return Error();
+            }
+
+            if (customerDelta.Dto.Addresses.Count == 0)
+            {
+                return Error(HttpStatusCode.BadRequest, "address", "invalid address paramters");
+            }
+
+                // Updateting the customer
+            var currentCustomer = _customerApiService.GetCustomerEntityById(customerDelta.Dto.Id);
+
+            if (currentCustomer == null)
+            {
+                return Error(HttpStatusCode.NotFound, "customer", "not found");
+            }
+
+            var oldAddressList = currentCustomer.Addresses.Select(x => x.Id).ToList();
+
+            // customerDelta.Merge(currentCustomer);
+
+            //if (customerDelta.Dto.RoleIds.Count > 0)
+            //{
+            //    AddValidRoles(customerDelta, currentCustomer);
+            //}
+
+            //if (customerDelta.Dto.Addresses.Count > 0)
+            //{
+                var currentCustomerAddresses = currentCustomer.Addresses.ToDictionary(address => address.Id, address => address);
+
+                foreach (var passedAddress in customerDelta.Dto.Addresses)
+                {
+                    var addressEntity = passedAddress.ToEntity();
+
+                    if (currentCustomerAddresses.ContainsKey(passedAddress.Id))
+                    {
+                        _mappingHelper.Merge(passedAddress, currentCustomerAddresses[passedAddress.Id]);
+                    }
+                    else
+                    {
+                        currentCustomer.Addresses.Add(addressEntity);
+                        //some validation
+                        if (addressEntity.CountryId == 0)
+                            addressEntity.CountryId = null;
+                        if (addressEntity.StateProvinceId == 0)
+                            addressEntity.StateProvinceId = null;
+
+                        currentCustomer.CustomerAddressMappings.Add(new CustomerAddressMapping { Address = addressEntity });
+                    }
+                }
+            //}
+
+            CustomerService.UpdateCustomer(currentCustomer);
+
+            // TODO: Localization
+
+            // Preparing the result dto of the new customer
+            // We do not prepare the shopping cart items because we have a separate endpoint for them.
+            var updatedCustomer = currentCustomer.ToDto();
+
+            // This is needed because the entity framework won't populate the navigation properties automatically
+            // and the country name will be left empty because the mapping depends on the navigation property
+            // so we do it by hand here.
+            PopulateAddressCountryNames(updatedCustomer);
+
+            //activity log
+            CustomerActivityService.InsertActivity("UpdateCustomer", LocalizationService.GetResource("ActivityLog.UpdateCustomer"), currentCustomer);
+
+            var newAddressList = updatedCustomer.Addresses.Select(x => x.Id).ToList();
+
+            var newId = newAddressList.Except(oldAddressList).FirstOrDefault();
+
+            var response = new ResponseBaseDto<int>()
+            {
+                Data = newId
+            };
+
+            var json = JsonFieldsSerializer.Serialize(response, string.Empty);
+
+            return new RawJsonActionResult(json);
+        }
+
+        private void PopulateAddressCountryNames(CustomerDto newCustomerDto)
+        {
+            foreach (var address in newCustomerDto.Addresses)
+            {
+                SetCountryName(address);
+            }
+
+            if (newCustomerDto.BillingAddress != null)
+            {
+                SetCountryName(newCustomerDto.BillingAddress);
+            }
+
+            if (newCustomerDto.ShippingAddress != null)
+            {
+                SetCountryName(newCustomerDto.ShippingAddress);
+            }
+        }
+
+        private void SetCountryName(AddressDto address)
+        {
+            if (string.IsNullOrEmpty(address.CountryName) && address.CountryId.HasValue)
+            {
+                var country = _countryService.GetCountryById(address.CountryId.Value);
+                address.CountryName = country.Name;
+            }
         }
     }
 }

@@ -4,9 +4,29 @@ using System.Text;
 using Newtonsoft.Json;
 using Nop.Plugin.Api.DTO;
 
-namespace Nop.Plugin.Api.SimpleDTO
+namespace Nop.Plugin.Api.DTO.Base
 {
-    public class SimpleBaseDto<T> : ISerializableObject where T: class
+    public class ResponseBaseDto : ISerializableObject
+    {
+        [JsonProperty("status")]
+        public int Status { get; set; }
+
+        [JsonProperty("msg")]
+        public string Message { get; set; }
+
+
+        public string GetPrimaryPropertyName()
+        {
+            return "";
+        }
+
+        public Type GetPrimaryPropertyType()
+        {
+            return null;
+        }
+    }
+
+    public class ResponseBaseDto<T> : ISerializableObject
     {
         [JsonProperty("status")]
         public int Status { get; set; }

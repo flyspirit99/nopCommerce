@@ -2,6 +2,7 @@
 using Newtonsoft.Json;
 using Nop.Plugin.Api.Attributes;
 using Nop.Plugin.Api.DTO.ShoppingCarts;
+using System.Linq;
 
 namespace Nop.Plugin.Api.DTO.Customers
 {
@@ -60,6 +61,17 @@ namespace Nop.Plugin.Api.DTO.Customers
                 if (_addresses == null)
                 {
                     _addresses = new List<AddressDto>();
+                }
+                else
+                {
+                    if(ShippingAddress != null)
+                    {
+                        var defaultAddress = _addresses.Where(x => x.Id == ShippingAddress.Id).FirstOrDefault();
+                        if(defaultAddress != null)
+                        {
+                            defaultAddress.IsDefault = true;
+                        }
+                    }
                 }
 
                 return _addresses;

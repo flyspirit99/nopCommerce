@@ -12,13 +12,13 @@ namespace Nop.Plugin.Api.Validators
         public AddressDtoValidator(IHttpContextAccessor httpContextAccessor, IJsonHelper jsonHelper, Dictionary<string, object> requestJsonDictionary) :
             base(httpContextAccessor, jsonHelper, requestJsonDictionary)
         {
-            SetFirstNameRule();
+            //SetFirstNameRule();
             SetLastNameRule();
-            SetEmailRule();
+            //SetEmailRule();
 
             SetAddress1Rule();
             SetCityRule();
-            SetZipPostalCodeRule();
+            //SetZipPostalCodeRule();
             SetCountryIdRule();
             SetPhoneNumberRule();
         }
@@ -42,15 +42,15 @@ namespace Nop.Plugin.Api.Validators
             SetGreaterThanZeroCreateOrUpdateRule(a => a.CountryId, "country_id required", "country_id");
         }
 
-        private void SetEmailRule()
-        {
-            SetNotNullOrEmptyCreateOrUpdateRule(a => a.Email, "email required", "email");
-        }
+        //private void SetEmailRule()
+        //{
+        //    SetNotNullOrEmptyCreateOrUpdateRule(a => a.Email, "email required", "email");
+        //}
 
-        private void SetFirstNameRule()
-        {
-            SetNotNullOrEmptyCreateOrUpdateRule(a => a.FirstName, "first_name required", "first_name");
-        }
+        //private void SetFirstNameRule()
+        //{
+        //    SetNotNullOrEmptyCreateOrUpdateRule(a => a.FirstName, "first_name required", "first_name");
+        //}
 
         private void SetLastNameRule()
         {

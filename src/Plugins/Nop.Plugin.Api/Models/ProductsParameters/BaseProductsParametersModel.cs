@@ -62,5 +62,11 @@ namespace Nop.Plugin.Api.Models.ProductsParameters
         /// </summary>
         [JsonProperty("category_id")]
         public int? CategoryId { get; set; }
+
+        [JsonProperty("customer_id")]
+        public int? CustomerId { get; set; }
+
+        [JsonProperty("is_homepage")]
+        public bool? IsHomePage { get; set; }
     }
 }

@@ -5,6 +5,7 @@ using System.Net;
 using Microsoft.AspNetCore.Mvc;
 using Nop.Core.Domain.Catalog;
 using Nop.Core.Domain.Discounts;
+using Nop.Core.Domain.Orders;
 using Nop.Plugin.Api.Attributes;
 using Nop.Plugin.Api.Delta;
 using Nop.Plugin.Api.DTO.Errors;
@@ -40,6 +41,7 @@ namespace Nop.Plugin.Api.Controllers
         private readonly IProductService _productService;
         private readonly IProductTagService _productTagService;
         private readonly IUrlRecordService _urlRecordService;
+        private readonly IShoppingCartItemApiService _shoppingCartItemApiService;
 
         public ProductsController(
             IProductApiService productApiService,
@@ -58,6 +60,7 @@ namespace Nop.Plugin.Api.Controllers
             IManufacturerService manufacturerService,
             IProductTagService productTagService,
             IProductAttributeService productAttributeService,
+            IShoppingCartItemApiService shoppingCartItemApiService,
             IDTOHelper dtoHelper) : base(jsonFieldsSerializer, aclService, customerService, storeMappingService, storeService, discountService,
                                          customerActivityService, localizationService, pictureService)
         {
@@ -68,6 +71,7 @@ namespace Nop.Plugin.Api.Controllers
             _urlRecordService = urlRecordService;
             _productService = productService;
             _productAttributeService = productAttributeService;
+            _shoppingCartItemApiService = shoppingCartItemApiService;
             _dtoHelper = dtoHelper;
         }
 
@@ -96,11 +100,25 @@ namespace Nop.Plugin.Api.Controllers
             }
 
             var allProducts = _productApiService.GetProducts(parameters.Ids, parameters.CreatedAtMin, parameters.CreatedAtMax, parameters.UpdatedAtMin,
-                                                             parameters.UpdatedAtMax, parameters.Limit, parameters.Page, parameters.SinceId, parameters.CategoryId,
-                                                             parameters.VendorName, parameters.PublishedStatus)
+                                                             parameters.UpdatedAtMax, parameters.Limit, parameters.Page, parameters.SinceId, parameters.CategoryId, 
+                                                             parameters.VendorName, parameters.IsHomePage, parameters.PublishedStatus)
                                                 .Where(p => StoreMappingService.Authorize(p));
 
             IList<ProductDto> productsAsDtos = allProducts.Select(product => _dtoHelper.PrepareProductDTO(product)).ToList();
+
+            if (parameters.CustomerId != null)
+            {
+                //IList<ShoppingCartItem> shoppingCartItems = _shoppingCartItemApiService.GetShoppingCartItems(parameters.CustomerId).Select(x => new { x.ProductId, x.ShoppingCartType }).ToList();
+                IList<int> shoppingCartItems = _shoppingCartItemApiService.GetShoppingCartItems(parameters.CustomerId).Where(x => x.ShoppingCartType == ShoppingCartType.Wishlist)
+                                        .Select(x => x.ProductId).ToList();
+                foreach(var p in productsAsDtos)
+                {
+                    if(shoppingCartItems.Contains(p.Id))
+                    {
+                        p.InWishList = true;
+                    }
+                }
+            }
 
             var productsRootObject = new ProductsRootObjectDto
                                      {

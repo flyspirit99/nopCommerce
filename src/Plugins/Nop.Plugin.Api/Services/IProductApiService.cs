@@ -12,7 +12,7 @@ namespace Nop.Plugin.Api.Services
             DateTime? createdAtMin = null, DateTime? createdAtMax = null, DateTime? updatedAtMin = null, DateTime? updatedAtMax = null,
             int limit = Constants.Configurations.DefaultLimit, int page = Constants.Configurations.DefaultPageValue,
             int sinceId = Constants.Configurations.DefaultSinceId,
-            int? categoryId = null, string vendorName = null, bool? publishedStatus = null);
+            int? categoryId = null, string vendorName = null, bool? isHomepage = false, bool? publishedStatus = null);
 
         int GetProductsCount(
             DateTime? createdAtMin = null, DateTime? createdAtMax = null,

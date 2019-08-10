@@ -34,9 +34,9 @@ namespace Nop.Plugin.Api.Services
             DateTime? createdAtMin = null, DateTime? createdAtMax = null, DateTime? updatedAtMin = null, DateTime? updatedAtMax = null,
             int limit = Constants.Configurations.DefaultLimit, int page = Constants.Configurations.DefaultPageValue,
             int sinceId = Constants.Configurations.DefaultSinceId,
-            int? categoryId = null, string vendorName = null, bool? publishedStatus = null)
+            int? categoryId = null, string vendorName = null, bool? isHomepage = null, bool? publishedStatus = null)
         {
-            var query = GetProductsQuery(createdAtMin, createdAtMax, updatedAtMin, updatedAtMax, vendorName, publishedStatus, ids, categoryId);
+            var query = GetProductsQuery(createdAtMin, createdAtMax, updatedAtMin, updatedAtMax, vendorName, publishedStatus, ids, categoryId, isHomepage);
 
             if (sinceId > 0)
             {
@@ -80,7 +80,7 @@ namespace Nop.Plugin.Api.Services
         private IQueryable<Product> GetProductsQuery(
             DateTime? createdAtMin = null, DateTime? createdAtMax = null,
             DateTime? updatedAtMin = null, DateTime? updatedAtMax = null, string vendorName = null,
-            bool? publishedStatus = null, IList<int> ids = null, int? categoryId = null)
+            bool? publishedStatus = null, IList<int> ids = null, int? categoryId = null, bool? isHomepage = null)
 
         {
             var query = _productRepository.Table;
@@ -116,6 +116,11 @@ namespace Nop.Plugin.Api.Services
             if (updatedAtMax != null)
             {
                 query = query.Where(c => c.UpdatedOnUtc < updatedAtMax.Value);
+            }
+
+            if(isHomepage != null)
+            {
+                query = query.Where(c => c.ShowOnHomepage == isHomepage);
             }
 
             if (!string.IsNullOrEmpty(vendorName))
